@@ -2,18 +2,23 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 
-# --- 1. 黄金バランス・パラメータ (計算テストのロジックを完全移植) ---
+# --- 1. 黄金バランス・パラメータ (初期値を決定) ---
 POPULATION = 5000
+# 地力：この値が高いほど初動が強く、壁を突破しやすい
 IMPACT = random.uniform(0.70, 0.92)      
+# 社会の受容性：平均的な壁の厚さ。低いほど流行しやすい
 THRESHOLD_AVG = random.uniform(0.35, 0.45) 
-
+# 初期減衰率：鮮度の落ちやすさ
 INITIAL_DECAY_PERCENT = random.uniform(0.09, 0.12) 
+# 再燃確率：続報やバズが起きる頻度
+REVIVAL_PROB_INIT = random.uniform(0.04, 0.07)
+
+# 実行パラメータのセット
 DECAY_PERCENT = INITIAL_DECAY_PERCENT
 DECAY_MIN_BASE = 0.035 
-
 BASE_VIEW_RATE = 0.004
-REVIVAL_PROB = random.uniform(0.04, 0.07)
 revival_success_count = 0
+REVIVAL_PROB = REVIVAL_PROB_INIT
 
 # --- 2. 初期化 ---
 user_thresholds = np.sort(np.random.normal(THRESHOLD_AVG, 0.15, POPULATION))
@@ -30,15 +35,23 @@ def get_status_bar(percent, width=20):
     filled = int(width * percent / 100)
     return "[" + "█" * filled + "░" * (width - filled) + "]"
 
+# --- 3. ターミナルへの初期値表示 ---
 print("\n" + "🚀 トレンドシミュレーター：黄金バランス統合版 開始 ".center(75, "="))
+print(f"\n[コンテンツ初期スペック]")
+print(f" ・地力 (IMPACT)         : {IMPACT:.2f} ({'★極めて高い' if IMPACT > 0.85 else '★標準以上'})")
+print(f" ・社会の受容性 (THR_AVG): {THRESHOLD_AVG:.2f} ({'軟調' if THRESHOLD_AVG < 0.4 else '硬派'})")
+print(f" ・鮮度減衰率 (DECAY)  : {INITIAL_DECAY_PERCENT:.1%} / step")
+print(f" ・再燃発生率     : {REVIVAL_PROB_INIT:.1%}")
+print("-" * 75)
 
-# --- 3. メインループ ---
+# --- 4. メインループ ---
 step = 1
 while True:
     step += 1
     new_posts = 0
     current_reach_p = (len(active_users) / POPULATION) * 100
     
+    # 普及抵抗（黄金比ロジック）
     resistance = 1.0
     if current_reach_p > 20: resistance += (current_reach_p - 20) * 0.008
     if current_reach_p > 60: resistance += (current_reach_p - 60) * 0.02
@@ -46,6 +59,7 @@ while True:
     decay_min = max(0.025, DECAY_MIN_BASE - (revival_success_count * 0.003))
     current_decay = min(0.35, DECAY_PERCENT * resistance)
     
+    # 同調圧力ブースト（75%以降）
     peer_pressure = 1.0
     if current_reach_p > 75:
         peer_pressure = 1.0 + (current_reach_p - 75) * 0.12
@@ -57,6 +71,7 @@ while True:
         if i not in active_users:
             if random.random() < (dynamic_view_rate * user_interests[i]):
                 luck = random.uniform(-0.05, 0.05)
+                # 黄金比：減衰と圧力の均衡
                 effective_impact = IMPACT * max(0.25, (1.0 - (current_reach_p / 350))) * peer_pressure
                 
                 if (effective_impact * freshness) + luck > user_thresholds[i]:
@@ -84,6 +99,7 @@ while True:
 
     freshness *= (1.0 - current_decay)
     
+    # リアルタイムログ出力
     if step % 10 == 0 or revival_occurred:
         rev_tag = f" ★再燃({revival_type})" if revival_occurred else ""
         print(f"Step {step:3} | {get_status_bar(current_reach_p)} {current_reach_p:5.1f}% | 新規: {new_posts:3}{rev_tag}")
@@ -98,7 +114,7 @@ while True:
         reason = "時間切れ"
         break
 
-# --- 4. 最終レポート ---
+# --- 5. 最終レポート ---
 final_count = len(active_users)
 print("\n" + "■" * 75)
 print(f" 📊 トレンド深層レポート ".center(75, "■"))
@@ -115,10 +131,9 @@ else: res = "社会現象"
 print(f" ● 最終格付     : 【{res}】")
 print("■" * 75 + "\n")
 
-# --- 5. グラフ描画 ---
+# --- 6. グラフ描画 ---
 plt.figure(figsize=(14, 6))
 
-# 左グラフ：勢いの推移
 plt.subplot(1, 2, 1)
 plt.plot(steps, new_posts_history, color='orange', label='New Users per Step')
 plt.fill_between(steps, new_posts_history, color='orange', alpha=0.2)
@@ -127,10 +142,8 @@ plt.xlabel("Steps")
 plt.ylabel("New Active Users")
 plt.grid(axis='y', alpha=0.3)
 
-# 右グラフ：累計到達（人数を明記）
 plt.subplot(1, 2, 2)
 plt.plot(steps, total_posts_history, color='dodgerblue', linewidth=2.5, label='Total Reach')
-# 到達人数を強調表示
 plt.annotate(f'Final: {final_count} users', 
              xy=(steps[-1], total_posts_history[-1]), 
              xytext=(steps[-1]*0.7, total_posts_history[-1]*0.8),
